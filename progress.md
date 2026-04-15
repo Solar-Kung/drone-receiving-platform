@@ -1,0 +1,239 @@
+# Implementation Progress
+
+> 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
+>
+> Last updated: <!-- UPDATE_TIMESTAMP -->
+
+---
+
+## Phase 1 — Single Drone Telemetry Pipeline
+
+**Goal:** 一架無人機，資料端到端流通，地圖上有東西在動
+
+### 1A. Data Model
+
+- [ ] `TelemetryData` model 精簡為核心欄位（drone_id, lat, lon, alt, timestamp）
+- [ ] 擴展欄位（battery, speed, heading, signal_strength）設為 nullable
+- [ ] TimescaleDB hypertable 以 `timestamp` 分區正確建立
+- [ ] Model 可透過 SQLAlchemy 正常寫入和查詢
+
+### 1B. REST Endpoints + WebSocket Broadcast
+
+- [ ] 新建 `backend/app/api/telemetry.py` router
+- [ ] 新建 `backend/app/schemas/telemetry.py` Pydantic schemas
+- [ ] `POST /api/v1/telemetry` — 寫入 DB + WebSocket broadcast，回傳 201
+- [ ] `GET /api/v1/telemetry/latest?drone_id=xxx` — 回傳最新一筆
+- [ ] `GET /api/v1/telemetry/history?drone_id=xxx&limit=100` — 回傳升序歷史資料
+- [ ] Router 註冊到 `main.py`
+- [ ] WebSocket envelope 格式統一為 `{ "type": "...", "drone_id": "...", "data": {...} }`
+- [ ] Swagger UI 手動測試三個 endpoint 全部通過
+
+### 1C. Telemetry Simulator
+
+- [ ] 新建 `backend/app/simulation/` 目錄
+- [ ] 新建 `backend/app/simulation/routes.py` — 台北路線 waypoint 定義
+- [ ] 新建 `backend/app/simulation/telemetry_simulator.py` — 核心 simulator class
+- [ ] Simulator 使用線性插值在 waypoint 間移動（非隨機跳躍）
+- [ ] 高度使用梯形曲線（起飛爬升 → 巡航 → 下降）
+- [ ] Simulator 透過 `httpx.AsyncClient` POST 到自己的 API（不直接寫 DB）
+- [ ] 預留 `speed_multiplier` 參數（Phase 4 用）
+- [ ] 掛載到 FastAPI `lifespan` 以 `asyncio.create_task` 啟動
+- [ ] 飛完一圈自動重新開始
+- [ ] `docker compose up` 後 simulator 自動執行，log 中每秒可見 POST
+
+### 1D. Frontend — Live Map + Flight Trail
+
+- [ ] 修改 `MapView.tsx` — 頁面載入時 GET history 畫 Polyline
+- [ ] WebSocket 即時更新 marker 位置
+- [ ] 新座標 append 到 Polyline（保留最近 500 點）
+- [ ] Marker popup 顯示高度、經緯度
+- [ ] 自訂無人機 icon（非預設 Leaflet marker）
+- [ ] 瀏覽器中可見無人機沿路線移動，軌跡連續
+
+### 1E. Frontend — Altitude Chart
+
+- [ ] 新建 `AltitudeChart.tsx`（使用 recharts LineChart）
+- [ ] X 軸顯示時間（最近 60 秒），Y 軸顯示高度 (m)
+- [ ] 透過 WebSocket 即時更新
+- [ ] 可見起飛爬升、巡航、下降曲線
+
+### Phase 1 Integration Test
+
+- [ ] `docker compose up -d` 後 5 秒內地圖上出現移動的無人機
+- [ ] 軌跡線連續（非跳躍式）
+- [ ] 高度圖表即時滾動更新
+- [ ] Swagger `GET /history` 回傳有資料
+- [ ] 開兩個瀏覽器 tab，兩邊地圖同步更新
+
+---
+
+## Phase 2 — Dashboard + Richer Telemetry
+
+**Goal:** Dashboard 卡片顯示 live 數字，遙測擴展 battery/speed/heading，告警系統
+
+### 2A. Stats Endpoint
+
+- [ ] 新建 `backend/app/api/stats.py` router
+- [ ] `GET /api/v1/stats/summary` — 聚合查詢 active_drones, total_points, latest_altitude
+- [ ] Router 註冊到 `main.py`
+- [ ] Simulator 運行時 active_drones >= 1
+
+### 2B. Dashboard UI
+
+- [ ] `Dashboard` 元件改用 TanStack Query 呼叫 stats API
+- [ ] 每 5 秒自動 refetch
+- [ ] 四張卡片顯示 live 數字（取代 `--`）
+
+### 2C. Extended Telemetry Fields
+
+- [ ] 更新 `TelemetryCreate` schema 加入 optional battery, speed, heading
+- [ ] 更新 POST handler 處理新欄位
+- [ ] Simulator 產生 battery drain（100% 線性遞減，每秒 -0.05%）
+- [ ] Simulator 產生 speed（根據 waypoint 間距，巡航 ~10 m/s）
+- [ ] Simulator 產生 heading（根據移動方向 atan2 計算）
+- [ ] WebSocket envelope 包含擴展欄位
+
+### 2D. Multi-Chart Panel
+
+- [ ] 新建 `TelemetryCharts.tsx`（或擴展 AltitudeChart）
+- [ ] 顯示三條線：altitude, battery, speed
+- [ ] 共用 X 軸（時間）
+- [ ] Battery < 20% 時有視覺警示（紅色/閃爍）
+
+### 2E. Alert System
+
+- [ ] 後端：POST handler 中 battery < 20% 發送 alert WebSocket 訊息
+- [ ] 後端：battery < 10% 發送 critical alert
+- [ ] 新建 `AlertPanel.tsx`（toast 或 badge 顯示告警）
+- [ ] 告警出現在前端 UI
+
+### Phase 2 Integration Test
+
+- [ ] Dashboard 卡片全部顯示 live 數字
+- [ ] 三個圖表即時更新
+- [ ] Battery 遞減至 < 20% 時前端出現 warning
+- [ ] Battery < 10% 時出現 critical alert
+
+---
+
+## Phase 3 — Multi-Drone + Flight Lifecycle
+
+**Goal:** 3-5 架無人機同時飛，完整起降生命週期，landing pad 管理
+
+### 3A. Fleet Simulator
+
+- [ ] 新建 `backend/app/simulation/fleet_simulator.py`
+- [ ] 定義多條路線（基隆河、太陽能板場、橋樑檢查）
+- [ ] 管理 3-5 個 DroneSimulator instance
+- [ ] 起飛時間間隔 30 秒（stagger）
+- [ ] 啟動時自動建立 drone records 到 DB
+- [ ] 每架 drone 有獨立 battery drain 曲線
+
+### 3B. Flight Orchestrator
+
+- [ ] 新建 `backend/app/simulation/orchestrator.py`
+- [ ] 自動建立 FlightRecord（→ scheduled）
+- [ ] 起飛時自動切換 → in_flight
+- [ ] 距離目標 < 500m 自動切換 → approaching
+- [ ] 呼叫 LandingManager 預約 pad → landing
+- [ ] 高度 = 0 且對齊 pad → landed
+- [ ] 等待 30 秒 → completed，釋放 pad
+- [ ] 無可用 pad 時進入 holding pattern
+- [ ] Flight status 變更透過 `/ws/flights` 即時推送
+- [ ] Redis pub/sub 做內部事件總線
+
+### 3C. Landing Pad Management
+
+- [ ] Simulator 啟動時建立 2-3 個 landing pad（松山、圓山、大直）
+- [ ] Orchestrator approaching 時呼叫 `assign_pad()`
+- [ ] Orchestrator completed 時呼叫 `release_pad()`
+- [ ] 同時兩架 approaching 不分配同一個 pad
+- [ ] Pad 狀態變更透過 `/ws/landings` 即時推送
+
+### 3D. Multi-Drone Map
+
+- [ ] `MapView.tsx` 支援多個 marker
+- [ ] 每架 drone 不同顏色
+- [ ] 每架有獨立軌跡線
+- [ ] 維護 `Map<drone_id, { marker, trail }>` 結構
+- [ ] 點擊 marker 顯示該 drone 資訊
+
+### 3E. Landing Pad UI
+
+- [ ] 地圖上顯示 landing pad markers（方形 icon）
+- [ ] Pad 顏色反映狀態（綠 available, 黃 reserved, 紅 occupied）
+- [ ] 點擊顯示 pad 資訊
+- [ ] 整合現有 `LandingControl` 元件到地圖
+
+### Phase 3 Integration Test
+
+- [ ] 地圖上同時顯示 3+ 架無人機在不同路線飛行
+- [ ] Flight status 自動轉換（不需手動 API call）
+- [ ] Landing pad 自動 reserve → occupy → release
+- [ ] 無可用 pad 時 drone 進入 holding pattern
+- [ ] 所有狀態變更在前端即時反映
+
+---
+
+## Phase 4 — Mission, Inspection + Simulation Control
+
+**Goal:** 完整巡檢任務流程、AI 報告、模擬控制面板
+
+### 4A. Mission System
+
+- [ ] Orchestrator 在 flight 開始時自動建立 Mission
+- [ ] 每到達 waypoint 更新 mission 進度
+- [ ] 進度透過 WebSocket 即時推送
+- [ ] 新建 `MissionProgress.tsx` 顯示進度條
+- [ ] Flight 完成時自動 complete mission
+
+### 4B. Inspection Data + AI Reports
+
+- [ ] 每個 waypoint 產生模擬巡檢圖片
+- [ ] 圖片上傳到 MinIO
+- [ ] 產生巡檢報告文字（範本或 AI）
+- [ ] 前端 `InspectionReport` 元件顯示圖片 + 報告
+
+### 4C. Anomaly Injection
+
+- [ ] Simulator 隨機注入 battery 突降
+- [ ] Simulator 隨機注入 GPS drift
+- [ ] Simulator 隨機注入 signal loss（暫停 telemetry）
+- [ ] Simulator 隨機注入 emergency return（中斷任務返航）
+- [ ] 異常事件觸發 alert system
+
+### 4D. Simulation Control Panel
+
+- [ ] 新建 `SimulationControl.tsx` 頁面
+- [ ] 後端 `POST /api/v1/simulation/control` endpoint
+- [ ] 後端 `GET /api/v1/simulation/status` endpoint
+- [ ] Start / Pause / Stop 控制
+- [ ] 速度調整（1x / 2x / 5x）
+- [ ] 手動新增/移除 drone
+- [ ] 場景 preset 選擇
+
+### Phase 4 Integration Test
+
+- [ ] Mission 隨 flight 自動建立並追蹤進度
+- [ ] 巡檢圖片在 MinIO 中可存取
+- [ ] 偶爾出現異常事件並觸發告警
+- [ ] 控制面板可暫停/恢復/調速模擬
+- [ ] 場景 preset 可正確載入
+
+---
+
+## Summary
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1 — Single Drone Pipeline | 🔲 Not started | 0 / 22 |
+| Phase 2 — Dashboard + Telemetry | 🔲 Not started | 0 / 18 |
+| Phase 3 — Multi-Drone + Lifecycle | 🔲 Not started | 0 / 25 |
+| Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |
+| **Total** | | **0 / 86** |
+
+### Status Legend
+
+- 🔲 Not started
+- 🟡 In progress
+- ✅ Complete

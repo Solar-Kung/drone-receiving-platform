@@ -38,12 +38,12 @@ npm run lint      # eslint on .ts/.tsx
 ### Data Flow
 
 ```
-ROS 2 / DDS  ──►  ros_bridge/  ──►  services/  ──►  TimescaleDB
-                  (subscribers)    (business logic)
-                                        │
-                                        ▼
-                              WebSocket manager  ──►  Frontend (React)
-                                   (Redis pub/sub)
+Simulation Engine  ──►  POST /api/v1/telemetry  ──►  TimescaleDB
+(1 Hz per drone)              │
+                              ├──►  WebSocket broadcast  ──►  Frontend (React)
+                              │          (Redis pub/sub)
+                              │
+ROS 2 / DDS  ──►  ros_bridge/  (fallback, optional)
 ```
 
 ### Backend (`backend/app/`)
@@ -54,7 +54,8 @@ ROS 2 / DDS  ──►  ros_bridge/  ──►  services/  ──►  TimescaleD
 - **`models/`** — SQLAlchemy ORM models: `Drone`, `FlightRecord`, `TelemetryData`, `LandingPad`, `LandingSchedule`, `Mission`, `InspectionImage`
 - **`api/`** — FastAPI routers: `flights`, `landings`, `data`, `websocket`
 - **`services/`** — Business logic: `FlightTracker` (telemetry persistence + state transitions + battery alerts), `LandingManager` (pad assignment), `DataCollector` (mission/image), `MinioClient` (presigned URLs)
-- **`ros_bridge/`** — ROS 2 subscribers. **Automatically falls back to mock mode** when `rclpy` is not installed. `telemetry_sub.py` mock generates random Taipei-area coords for `mock-drone-001` at 1 Hz.
+- **`simulation/`** — *(Phase 1+)* Telemetry simulator, fleet simulator, flight orchestrator, route definitions
+- **`ros_bridge/`** — ROS 2 subscribers. **Automatically falls back to mock mode** when `rclpy` is not installed. Being replaced by `simulation/` module.
 
 ### WebSocket Channels
 
@@ -62,6 +63,15 @@ Three channels managed by a single `ConnectionManager` in `api/websocket.py`:
 - `/ws/telemetry` — real-time telemetry; also carries battery alert messages
 - `/ws/flights` — flight status change events
 - `/ws/landings` — landing pad status updates
+
+**Envelope format** (all WebSocket messages must use):
+```json
+{
+  "type": "telemetry_update",
+  "drone_id": "drone-001",
+  "data": { "latitude": 25.033, "longitude": 121.565, "altitude": 120.5, "timestamp": "..." }
+}
+```
 
 ### Frontend (`frontend/src/`)
 
@@ -83,16 +93,21 @@ Three channels managed by a single `ConnectionManager` in `api/websocket.py`:
 ## Key Implementation Notes
 
 - **Flight status lifecycle**: `scheduled → in_flight → approaching → landing → landed → completed / aborted`
-- **Telemetry is NOT persisted for mock drones** — `FlightTracker.handle_telemetry` skips DB write when `drone_id == "mock-drone-001"` or `flight_id == "mock-flight-001"`, but still broadcasts over WebSocket.
+- **Simulator pushes data via REST API** — `POST /api/v1/telemetry`, same path a real drone would use. Simulator does NOT write directly to DB or WebSocket.
+- **TelemetryData model** — core fields: `drone_id`, `latitude`, `longitude`, `altitude`, `timestamp`. Extended fields (`battery`, `speed`, `heading`, `signal_strength`) are nullable, enabled in Phase 2.
 - **MinIO buckets** (`inspection-images`, `flight-logs`) are auto-created on startup by `ensure_buckets()`.
 - **No authentication layer** exists yet — all endpoints are open.
-- The dashboard summary cards (Active Drones, Active Flights, Available Pads, Today's Missions) are currently hardcoded as `--` and not yet wired to the API.
-- `recharts` is already a frontend dependency for telemetry charts (not yet implemented).
+- `recharts` is already a frontend dependency for telemetry charts.
 
-## Planned Work (see `docs/platform_status_and_plan.md`)
+## Planned Work
 
-The roadmap is organized in four phases:
-1. **Core Simulation Engine** — replace minimal mock mode with full `SimulationEngine` service
-2. **Dashboard & UI Completion** — wire live stats, telemetry charts, multi-drone map
-3. **AI-Generated Data** — inspection reports, anomaly injection, historical backfill
-4. **Advanced Features** — simulation control panel, scenario presets, replay mode
+See these docs for implementation details:
+- **`docs/platform_status_and_plan.md`** — Platform current status & capabilities overview
+- **`docs/implementation_plan.md`** — **Active implementation plan** with Phase 1-4 details, API specs, code examples, file structure, and acceptance criteria
+
+When implementing features, always read `docs/implementation_plan.md` first and follow the phase order:
+
+1. **Phase 1** — Single drone telemetry pipeline (data model → REST API → simulator → map + chart)
+2. **Phase 2** — Dashboard stats + extended telemetry (battery/speed/heading) + alerts
+3. **Phase 3** — Multi-drone fleet + flight lifecycle orchestrator + landing pad management
+4. **Phase 4** — Mission/inspection system + anomaly injection + simulation control panel
