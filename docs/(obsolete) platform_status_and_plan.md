@@ -1,3 +1,4 @@
+# !!!!! Superseded by implementation_plan.md for active development !!!!!
 # Drone Receiving Platform — Current Status & Simulation Capability Plan
 
 ## Current Status Summary
