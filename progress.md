@@ -12,9 +12,9 @@
 
 ### 1A. Data Model
 
-- [ ] `TelemetryData` model 精簡為核心欄位（drone_id, lat, lon, alt, timestamp）
-- [ ] 擴展欄位（battery, speed, heading, signal_strength）設為 nullable
-- [ ] TimescaleDB hypertable 以 `timestamp` 分區正確建立
+- [x] `TelemetryData` model 精簡為核心欄位（drone_id, lat, lon, alt, timestamp）
+- [x] 擴展欄位（battery, speed, heading, signal_strength）設為 nullable
+- [x] TimescaleDB hypertable 以 `timestamp` 分區正確建立
 - [ ] Model 可透過 SQLAlchemy 正常寫入和查詢
 
 ### 1B. REST Endpoints + WebSocket Broadcast
@@ -226,7 +226,7 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1 — Single Drone Pipeline | 🔲 Not started | 0 / 22 |
+| Phase 1 — Single Drone Pipeline | 🟡 In progress | 3 / 22 |
 | Phase 2 — Dashboard + Telemetry | 🔲 Not started | 0 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🔲 Not started | 0 / 25 |
 | Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |

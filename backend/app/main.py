@@ -7,6 +7,8 @@ from app.config import settings
 from app.api import flights, landings, data, websocket
 from app.database import engine, Base
 from app.services.minio_client import ensure_buckets
+from app.services.timescale import ensure_hypertable
+import app.models  # noqa: F401 — registers all models (incl. telemetry) with Base.metadata
 
 
 @asynccontextmanager
@@ -14,6 +16,7 @@ async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await ensure_hypertable()
     await ensure_buckets()
     yield
     # Shutdown
