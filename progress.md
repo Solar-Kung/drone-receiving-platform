@@ -231,7 +231,7 @@
 - [x] WP3: UDP Socket + Protobuf (RAII socket, proto codegen, Python receiver check)
 - [x] WP4: Publisher integration + Threading (producer-consumer queue, SIGINT, spdlog)
 - [x] WP5: Backend UDP Listener integration (Python asyncio UDP, WebSocket bridge)
-- [ ] WP6: Documentation + cleanup (README, clang-format, zero-warning check)
+- [x] WP6: Documentation + cleanup (README, clang-format, zero-warning check)
 
 ---
 
