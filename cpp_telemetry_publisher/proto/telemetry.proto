@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package drone_platform.telemetry;
+
+/// Telemetry packet sent from the C++ publisher to the Python backend via UDP.
+message TelemetryPacket {
+  string drone_id      = 1;
+  int64  timestamp_ms  = 2;  // Unix epoch milliseconds
+
+  // Position
+  double latitude      = 3;
+  double longitude     = 4;
+  double altitude_m    = 5;
+
+  // Motion
+  double speed_mps     = 6;
+  double heading_deg   = 7;
+
+  // Status
+  double battery_percent = 8;
+  double signal_strength = 9;
+
+  // Sequence number for packet-loss detection
+  uint32 sequence      = 10;
+}
