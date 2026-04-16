@@ -1,0 +1,11 @@
+{
+  "name": "telemetry-publisher",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "spdlog",
+    "yaml-cpp",
+    "cli11",
+    "protobuf",
+    "gtest"
+  ]
+}

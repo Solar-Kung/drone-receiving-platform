@@ -1,0 +1,22 @@
+publisher:
+  drone_id: "cpp-drone-001"
+  target_host: "127.0.0.1"   # Backend UDP listener; override via env in Docker
+  target_port: 14550
+  publish_rate_hz: 10
+  log_level: "info"
+
+trajectory:
+  # Linear interpolation between waypoints (Taipei 101 area)
+  waypoints:
+    - { lat: 25.0330, lon: 121.5654, alt:   0.0, hold_sec: 2.0 }   # Taipei 101 — takeoff
+    - { lat: 25.0340, lon: 121.5670, alt:  50.0, hold_sec: 1.0 }
+    - { lat: 25.0360, lon: 121.5690, alt: 100.0, hold_sec: 5.0 }   # cruise altitude
+    - { lat: 25.0340, lon: 121.5670, alt:  50.0, hold_sec: 1.0 }
+    - { lat: 25.0330, lon: 121.5654, alt:   0.0, hold_sec: 0.0 }   # return & land
+  speed_mps: 10.0
+
+simulation:
+  battery_drain_per_second: 0.05   # % per second (full battery lasts ~33 min)
+  signal_base: 95.0
+  signal_noise: 5.0
+  loop: true                        # restart when route is complete

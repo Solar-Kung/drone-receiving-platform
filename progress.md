@@ -222,6 +222,19 @@
 
 ---
 
+## Phase C: C++ Telemetry Publisher
+
+**Goal:** Standalone C++17 subproject that publishes drone telemetry via UDP/protobuf to the Python backend.
+
+- [x] WP1: Project skeleton + Hello World (CMakeLists.txt, vcpkg.json, Dockerfile, main.cpp)
+- [ ] WP2: Config + Trajectory (YAML config, linear interpolation, unit tests)
+- [ ] WP3: UDP Socket + Protobuf (RAII socket, proto codegen, Python receiver check)
+- [ ] WP4: Publisher integration + Threading (producer-consumer queue, SIGINT, spdlog)
+- [ ] WP5: Backend UDP Listener integration (Python asyncio UDP, WebSocket bridge)
+- [ ] WP6: Documentation + cleanup (README, clang-format, zero-warning check)
+
+---
+
 ## Summary
 
 | Phase | Status | Progress |
