@@ -230,7 +230,7 @@
 - [x] WP2: Config + Trajectory (YAML config, linear interpolation, unit tests)
 - [x] WP3: UDP Socket + Protobuf (RAII socket, proto codegen, Python receiver check)
 - [x] WP4: Publisher integration + Threading (producer-consumer queue, SIGINT, spdlog)
-- [ ] WP5: Backend UDP Listener integration (Python asyncio UDP, WebSocket bridge)
+- [x] WP5: Backend UDP Listener integration (Python asyncio UDP, WebSocket bridge)
 - [ ] WP6: Documentation + cleanup (README, clang-format, zero-warning check)
 
 ---

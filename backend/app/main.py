@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,6 +9,8 @@ from app.api import flights, landings, data, websocket
 from app.database import engine, Base
 from app.services.minio_client import ensure_buckets
 from app.services.timescale import ensure_hypertable
+from app.ros_bridge.udp_listener import start_udp_listener
+from app.services.flight_tracker import flight_tracker
 import app.models  # noqa: F401 — registers all models (incl. telemetry) with Base.metadata
 
 
@@ -18,6 +21,8 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     await ensure_hypertable()
     await ensure_buckets()
+    # Start UDP listener for C++ telemetry publisher (WP5)
+    asyncio.create_task(start_udp_listener(flight_tracker.handle_telemetry))
     yield
     # Shutdown
     await engine.dispose()

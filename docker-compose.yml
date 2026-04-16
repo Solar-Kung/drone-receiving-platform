@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+      - "14550:14550/udp"   # C++ telemetry publisher → UDP listener (WP5)
     env_file:
       - ./configs/.env
     depends_on:
@@ -75,6 +76,21 @@ services:
       - minio_data:/data
     networks:
       - drone-net
+
+  # C++ telemetry publisher — run manually:
+  #   docker compose --profile simulator up cpp_publisher
+  cpp_publisher:
+    build:
+      context: ./cpp_telemetry_publisher
+    depends_on:
+      - backend
+    environment:
+      - TARGET_HOST=backend
+      - TARGET_PORT=14550
+    networks:
+      - drone-net
+    profiles:
+      - simulator
 
 volumes:
   timescaledb_data:

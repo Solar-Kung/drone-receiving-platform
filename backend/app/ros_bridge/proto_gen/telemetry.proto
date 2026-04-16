@@ -1,0 +1,18 @@
+// Mirror of cpp_telemetry_publisher/proto/telemetry.proto
+// Used by the backend to generate telemetry_pb2.py at container startup.
+syntax = "proto3";
+
+package drone_platform.telemetry;
+
+message TelemetryPacket {
+  string drone_id      = 1;
+  int64  timestamp_ms  = 2;
+  double latitude      = 3;
+  double longitude     = 4;
+  double altitude_m    = 5;
+  double speed_mps     = 6;
+  double heading_deg   = 7;
+  double battery_percent = 8;
+  double signal_strength = 9;
+  uint32 sequence      = 10;
+}

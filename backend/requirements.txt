@@ -6,3 +6,6 @@ asyncpg==0.29.0
 redis[hiredis]==5.1.0
 miniopy-async==1.21.1
 python-multipart==0.0.9
+# WP5: protobuf decoding for C++ UDP publisher
+protobuf==5.29.4
+grpcio-tools==1.71.0
