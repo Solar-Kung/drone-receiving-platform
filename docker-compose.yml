@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   backend:
     build:
@@ -43,7 +41,7 @@ services:
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U drone_admin -d drone_station"]
+      test: [ "CMD-SHELL", "pg_isready -U drone_admin -d drone_station" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,7 +55,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,6 +80,7 @@ volumes:
   timescaledb_data:
   redis_data:
   minio_data:
+
 
 networks:
   drone-net:
