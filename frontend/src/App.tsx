@@ -1,5 +1,6 @@
 import { Routes, Route, NavLink } from "react-router-dom";
 import MapView from "./components/MapView/MapView";
+import AltitudeChart from "./components/AltitudeChart/AltitudeChart";
 import TelemetryPanel from "./components/TelemetryPanel/TelemetryPanel";
 import LandingControl from "./components/LandingControl/LandingControl";
 import InspectionReport from "./components/InspectionReport/InspectionReport";
@@ -57,6 +58,10 @@ function Dashboard() {
       <div className="card">
         <div className="card-header">Live Map</div>
         <MapView />
+      </div>
+      <div className="card">
+        <div className="card-header">Altitude Profile</div>
+        <AltitudeChart />
       </div>
     </div>
   );

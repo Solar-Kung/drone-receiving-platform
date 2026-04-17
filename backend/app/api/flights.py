@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.drone import Drone
-from app.models.flight import FlightRecord, FlightStatus, TelemetryData
+from app.models.flight import FlightRecord, FlightStatus
 
 router = APIRouter()
 
@@ -113,6 +113,8 @@ async def get_flight(flight_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 # --- Telemetry Endpoints ---
+# Per-flight telemetry queries are deferred to Phase 3 when flight_id
+# is wired into TelemetryData. Use GET /api/v1/telemetry/history for now.
 
 @router.get("/{flight_id}/telemetry", response_model=list[TelemetryResponse])
 async def get_flight_telemetry(
@@ -120,10 +122,4 @@ async def get_flight_telemetry(
     limit: int = Query(default=100, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(TelemetryData)
-        .where(TelemetryData.flight_id == flight_id)
-        .order_by(TelemetryData.time.desc())
-        .limit(limit)
-    )
-    return result.scalars().all()
+    return []

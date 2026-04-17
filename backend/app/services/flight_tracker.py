@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.websocket import manager
 from app.database import async_session
-from app.models.flight import FlightRecord, FlightStatus, TelemetryData
+from app.models.flight import FlightRecord, FlightStatus
+from app.models.telemetry import TelemetryData
 from app.ros_bridge.telemetry_sub import TelemetryMessage
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,7 @@ class FlightTracker:
         """Store telemetry data and broadcast to WebSocket clients."""
         async with async_session() as db:
             telemetry = TelemetryData(
-                drone_id=uuid.UUID(msg.drone_id) if msg.drone_id != "mock-drone-001" else None,
-                flight_id=uuid.UUID(msg.flight_id) if msg.flight_id != "mock-flight-001" else None,
+                drone_id=msg.drone_id,
                 latitude=msg.latitude,
                 longitude=msg.longitude,
                 altitude=msg.altitude,
@@ -37,9 +37,8 @@ class FlightTracker:
                 heading=msg.heading,
                 battery_level=msg.battery_level,
                 signal_strength=msg.signal_strength,
-                status_message=msg.status_message,
             )
-            if telemetry.drone_id and telemetry.flight_id:
+            if telemetry.drone_id:
                 db.add(telemetry)
                 await db.commit()
 
