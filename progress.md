@@ -2,7 +2,7 @@
 
 > 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
 >
-> Last updated: <!-- UPDATE_TIMESTAMP -->
+> Last updated: 2026-04-17
 
 ---
 
@@ -15,46 +15,46 @@
 - [x] `TelemetryData` model 精簡為核心欄位（drone_id, lat, lon, alt, timestamp）
 - [x] 擴展欄位（battery, speed, heading, signal_strength）設為 nullable
 - [x] TimescaleDB hypertable 以 `timestamp` 分區正確建立
-- [ ] Model 可透過 SQLAlchemy 正常寫入和查詢
+- [x] Model 可透過 SQLAlchemy 正常寫入和查詢
 
 ### 1B. REST Endpoints + WebSocket Broadcast
 
-- [ ] 新建 `backend/app/api/telemetry.py` router
-- [ ] 新建 `backend/app/schemas/telemetry.py` Pydantic schemas
-- [ ] `POST /api/v1/telemetry` — 寫入 DB + WebSocket broadcast，回傳 201
-- [ ] `GET /api/v1/telemetry/latest?drone_id=xxx` — 回傳最新一筆
-- [ ] `GET /api/v1/telemetry/history?drone_id=xxx&limit=100` — 回傳升序歷史資料
-- [ ] Router 註冊到 `main.py`
-- [ ] WebSocket envelope 格式統一為 `{ "type": "...", "drone_id": "...", "data": {...} }`
-- [ ] Swagger UI 手動測試三個 endpoint 全部通過
+- [x] 新建 `backend/app/api/telemetry.py` router
+- [x] 新建 `backend/app/schemas/telemetry.py` Pydantic schemas
+- [x] `POST /api/v1/telemetry` — 寫入 DB + WebSocket broadcast，回傳 201
+- [x] `GET /api/v1/telemetry/latest?drone_id=xxx` — 回傳最新一筆
+- [x] `GET /api/v1/telemetry/history?drone_id=xxx&limit=100` — 回傳升序歷史資料
+- [x] Router 註冊到 `main.py`
+- [x] WebSocket envelope 格式統一為 `{ "type": "...", "drone_id": "...", "data": {...} }`
+- [x] Swagger UI 手動測試三個 endpoint 全部通過
 
 ### 1C. Telemetry Simulator
 
-- [ ] 新建 `backend/app/simulation/` 目錄
-- [ ] 新建 `backend/app/simulation/routes.py` — 台北路線 waypoint 定義
-- [ ] 新建 `backend/app/simulation/telemetry_simulator.py` — 核心 simulator class
-- [ ] Simulator 使用線性插值在 waypoint 間移動（非隨機跳躍）
-- [ ] 高度使用梯形曲線（起飛爬升 → 巡航 → 下降）
-- [ ] Simulator 透過 `httpx.AsyncClient` POST 到自己的 API（不直接寫 DB）
-- [ ] 預留 `speed_multiplier` 參數（Phase 4 用）
-- [ ] 掛載到 FastAPI `lifespan` 以 `asyncio.create_task` 啟動
-- [ ] 飛完一圈自動重新開始
-- [ ] `docker compose up` 後 simulator 自動執行，log 中每秒可見 POST
+- [x] 新建 `backend/app/simulation/` 目錄
+- [x] 新建 `backend/app/simulation/routes.py` — 台北路線 waypoint 定義
+- [x] 新建 `backend/app/simulation/telemetry_simulator.py` — 核心 simulator class
+- [x] Simulator 使用線性插值在 waypoint 間移動（非隨機跳躍）
+- [x] 高度使用梯形曲線（起飛爬升 → 巡航 → 下降）
+- [x] Simulator 透過 `httpx.AsyncClient` POST 到自己的 API（不直接寫 DB）
+- [x] 預留 `speed_multiplier` 參數（Phase 4 用）
+- [x] 掛載到 FastAPI `lifespan` 以 `asyncio.create_task` 啟動
+- [x] 飛完一圈自動重新開始
+- [x] `docker compose up` 後 simulator 自動執行，log 中每秒可見 POST
 
 ### 1D. Frontend — Live Map + Flight Trail
 
-- [ ] 修改 `MapView.tsx` — 頁面載入時 GET history 畫 Polyline
-- [ ] WebSocket 即時更新 marker 位置
-- [ ] 新座標 append 到 Polyline（保留最近 500 點）
-- [ ] Marker popup 顯示高度、經緯度
-- [ ] 自訂無人機 icon（非預設 Leaflet marker）
+- [x] 修改 `MapView.tsx` — 頁面載入時 GET history 畫 Polyline
+- [x] WebSocket 即時更新 marker 位置
+- [x] 新座標 append 到 Polyline（保留最近 500 點）
+- [x] Marker popup 顯示高度、經緯度
+- [x] 自訂無人機 icon（非預設 Leaflet marker）
 - [ ] 瀏覽器中可見無人機沿路線移動，軌跡連續
 
 ### 1E. Frontend — Altitude Chart
 
-- [ ] 新建 `AltitudeChart.tsx`（使用 recharts LineChart）
-- [ ] X 軸顯示時間（最近 60 秒），Y 軸顯示高度 (m)
-- [ ] 透過 WebSocket 即時更新
+- [x] 新建 `AltitudeChart.tsx`（使用 recharts LineChart）
+- [x] X 軸顯示時間（最近 60 秒），Y 軸顯示高度 (m)
+- [x] 透過 WebSocket 即時更新
 - [ ] 可見起飛爬升、巡航、下降曲線
 
 ### Phase 1 Integration Test
@@ -62,7 +62,7 @@
 - [ ] `docker compose up -d` 後 5 秒內地圖上出現移動的無人機
 - [ ] 軌跡線連續（非跳躍式）
 - [ ] 高度圖表即時滾動更新
-- [ ] Swagger `GET /history` 回傳有資料
+- [x] Swagger `GET /history` 回傳有資料
 - [ ] 開兩個瀏覽器 tab，兩邊地圖同步更新
 
 ---
@@ -239,14 +239,18 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1 — Single Drone Pipeline | 🟡 In progress | 3 / 22 |
+| Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🔲 Not started | 0 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🔲 Not started | 0 / 25 |
 | Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |
-| **Total** | | **0 / 86** |
+| **Total** | | **31 / 101** |
 
 ### Status Legend
 
 - 🔲 Not started
 - 🟡 In progress
 - ✅ Complete
+
+### Notes on unchecked Phase 1 items
+
+The 6 unchecked items (1D browser visual, 1E browser visual, and 4 integration-test browser items) require visual confirmation in a real browser session. The underlying code is implemented; these items should be checked after manual browser verification.
