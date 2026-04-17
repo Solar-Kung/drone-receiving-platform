@@ -4,6 +4,8 @@ interface WebSocketState<T> {
   data: T | null;
   connected: boolean;
   error: string | null;
+  /** Full parsed envelope — use this when you need message.type (e.g. "alert"). */
+  lastRawMessage: unknown | null;
 }
 
 export function useWebSocket<T>(channel: string): WebSocketState<T> {
@@ -11,6 +13,7 @@ export function useWebSocket<T>(channel: string): WebSocketState<T> {
     data: null,
     connected: false,
     error: null,
+    lastRawMessage: null,
   });
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -30,9 +33,12 @@ export function useWebSocket<T>(channel: string): WebSocketState<T> {
       try {
         const message = JSON.parse(event.data);
         if (message.type === "pong") return;
-        if (message.data) {
-          setState((prev) => ({ ...prev, data: message.data as T }));
-        }
+        setState((prev) => ({
+          ...prev,
+          lastRawMessage: message,
+          // Only update `data` for messages that carry a data payload
+          ...(message.data != null ? { data: message.data as T } : {}),
+        }));
       } catch {
         // Ignore parse errors for non-JSON messages
       }

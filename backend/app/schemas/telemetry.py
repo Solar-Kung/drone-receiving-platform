@@ -10,6 +10,11 @@ class TelemetryCreate(BaseModel):
     longitude: float
     altitude: float
     timestamp: datetime
+    # Phase 2 extended fields — optional so Phase 1 clients remain compatible
+    battery_level: float | None = None
+    speed: float | None = None
+    heading: float | None = None
+    signal_strength: float | None = None
 
 
 class TelemetryResponse(BaseModel):
@@ -19,5 +24,9 @@ class TelemetryResponse(BaseModel):
     longitude: float
     altitude: float
     timestamp: datetime
+    battery_level: float | None = None
+    speed: float | None = None
+    heading: float | None = None
+    signal_strength: float | None = None
 
     model_config = {"from_attributes": True}

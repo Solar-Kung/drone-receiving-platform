@@ -20,10 +20,10 @@ async def receive_telemetry(
         longitude=data.longitude,
         altitude=data.altitude,
         timestamp=data.timestamp,
-        speed=None,
-        heading=None,
-        battery_level=None,
-        signal_strength=None,
+        speed=data.speed,
+        heading=data.heading,
+        battery_level=data.battery_level,
+        signal_strength=data.signal_strength,
     )
     db.add(telemetry)
     await db.commit()
@@ -38,8 +38,29 @@ async def receive_telemetry(
             "longitude": data.longitude,
             "altitude": data.altitude,
             "timestamp": data.timestamp.isoformat(),
+            "battery_level": data.battery_level,
+            "speed": data.speed,
+            "heading": data.heading,
+            "signal_strength": data.signal_strength,
         },
     })
+
+    # Battery alerts
+    if data.battery_level is not None:
+        if data.battery_level < 10:
+            await manager.broadcast("telemetry", {
+                "type": "alert",
+                "drone_id": data.drone_id,
+                "level": "critical",
+                "message": f"Battery critical: {data.battery_level:.0f}%",
+            })
+        elif data.battery_level < 20:
+            await manager.broadcast("telemetry", {
+                "type": "alert",
+                "drone_id": data.drone_id,
+                "level": "warning",
+                "message": f"Battery low: {data.battery_level:.0f}%",
+            })
 
     return {"success": True, "data": TelemetryResponse.model_validate(telemetry)}
 

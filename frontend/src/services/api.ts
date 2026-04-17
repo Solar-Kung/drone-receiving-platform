@@ -9,15 +9,21 @@ const client = axios.create({
 
 export interface TelemetryData {
   drone_id: string;
-  flight_id: string;
   timestamp: string;
   latitude: number;
   longitude: number;
   altitude: number;
-  speed: number;
-  heading: number;
-  battery_level: number;
-  signal_strength: number;
+  speed: number | null;
+  heading: number | null;
+  battery_level: number | null;
+  signal_strength: number | null;
+}
+
+export interface StatsSummary {
+  active_drones: number;
+  total_telemetry_points: number;
+  latest_altitude: number | null;
+  uptime_since: string;
 }
 
 export interface Drone {
@@ -92,6 +98,12 @@ export const api = {
     drone_id?: string;
   }): Promise<Mission[]> => {
     const { data } = await client.get("/data/missions", { params });
+    return data;
+  },
+
+  // Stats
+  getStats: async (): Promise<{ success: boolean; data: StatsSummary }> => {
+    const { data } = await client.get("/stats/summary");
     return data;
   },
 };

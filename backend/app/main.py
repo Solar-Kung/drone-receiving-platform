@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api import flights, landings, data, websocket, telemetry
+from app.api import flights, landings, data, websocket, telemetry, stats
 from app.database import engine, Base
 from app.services.minio_client import ensure_buckets
 from app.services.timescale import ensure_hypertable
@@ -62,6 +62,7 @@ app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetr
 app.include_router(flights.router, prefix="/api/v1/flights", tags=["flights"])
 app.include_router(landings.router, prefix="/api/v1/landings", tags=["landings"])
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
+app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 
 
