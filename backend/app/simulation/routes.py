@@ -19,3 +19,27 @@ TAIPEI_ROUTE = [
     {"lat": 25.0700, "lon": 121.5250, "alt": 30},     # returning
     {"lat": 25.0634, "lon": 121.5522, "alt": 0},      # Songshan Airport (land)
 ]
+
+# Route 2: Solar farm grid scan (Zhonghe area)
+SOLAR_FARM_ROUTE = [
+    {"lat": 24.9980, "lon": 121.4950, "alt": 0},
+    {"lat": 24.9980, "lon": 121.4950, "alt": 60},
+    {"lat": 24.9990, "lon": 121.4950, "alt": 60},
+    {"lat": 24.9990, "lon": 121.4970, "alt": 60},
+    {"lat": 25.0000, "lon": 121.4970, "alt": 60},
+    {"lat": 25.0000, "lon": 121.4950, "alt": 60},
+    {"lat": 25.0010, "lon": 121.4950, "alt": 60},
+    {"lat": 25.0010, "lon": 121.4970, "alt": 60},
+    {"lat": 24.9980, "lon": 121.4950, "alt": 0},
+]
+
+# Route 3: Bridge inspection (Xinbei Bridge)
+BRIDGE_INSPECTION_ROUTE = [
+    {"lat": 25.0570, "lon": 121.4650, "alt": 0},
+    {"lat": 25.0570, "lon": 121.4650, "alt": 40},
+    {"lat": 25.0580, "lon": 121.4680, "alt": 30},
+    {"lat": 25.0590, "lon": 121.4710, "alt": 25},
+    {"lat": 25.0600, "lon": 121.4740, "alt": 30},
+    {"lat": 25.0610, "lon": 121.4770, "alt": 35},
+    {"lat": 25.0570, "lon": 121.4650, "alt": 0},
+]
