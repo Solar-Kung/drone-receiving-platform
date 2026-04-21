@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from app.api.websocket import manager
 from app.database import async_session
+from app.services import inspection_image_generator
 from app.models.drone import Drone
 from app.models.flight import FlightRecord, FlightStatus
 from app.models.landing import LandingPad
@@ -181,6 +182,17 @@ class FlightOrchestrator:
                         "progress": progress,
                     },
                 })
+                # Generate inspection image for mid-route waypoints (skip first and last)
+                is_takeoff = segment_idx == 0
+                is_landing = segment_idx >= total_segments - 1
+                if not is_takeoff and not is_landing:
+                    lat = point.get("lat", 0.0)
+                    lon = point.get("lon", 0.0)
+                    asyncio.create_task(
+                        self._generate_inspection_image(
+                            mission_id, drone_id, segment_idx, total_segments, lat, lon,
+                        )
+                    )
 
         # Fast-path exits — avoid lock + DB session on every tick
         if current_status == FlightStatus.IN_FLIGHT and battery > 0 and segment_idx < total_segments * 0.8:
@@ -280,6 +292,36 @@ class FlightOrchestrator:
                     m.status = MissionStatus.DATA_UPLOADING
                     await db.commit()
                     logger.info("[%s] mission → data_uploading", drone_id)
+
+    async def _generate_inspection_image(
+        self,
+        mission_id: uuid.UUID,
+        drone_id: str,
+        waypoint_idx: int,
+        total_waypoints: int,
+        lat: float,
+        lon: float,
+    ) -> None:
+        """Non-blocking wrapper around inspection_image_generator."""
+        image_record = await inspection_image_generator.generate_and_upload(
+            mission_id=mission_id,
+            drone_id=drone_id,
+            waypoint_idx=waypoint_idx,
+            total_waypoints=total_waypoints,
+            latitude=lat,
+            longitude=lon,
+        )
+        if image_record:
+            await manager.broadcast("telemetry", {
+                "type": "inspection_image",
+                "drone_id": drone_id,
+                "data": {
+                    "mission_id": str(mission_id),
+                    "image_id": str(image_record.id),
+                    "filename": image_record.filename,
+                    "waypoint_idx": waypoint_idx,
+                },
+            })
 
     async def _complete_mission(self, drone_id: str, db) -> None:
         """Mark mission as COMPLETED. Called when flight reaches COMPLETED."""

@@ -189,10 +189,10 @@
 
 ### 4B. Inspection Data + AI Reports
 
-- [ ] 每個 waypoint 產生模擬巡檢圖片
-- [ ] 圖片上傳到 MinIO
+- [x] 每個 waypoint 產生模擬巡檢圖片
+- [x] 圖片上傳到 MinIO
 - [ ] 產生巡檢報告文字（範本或 AI）
-- [ ] 前端 `InspectionReport` 元件顯示圖片 + 報告
+- [x] 前端 `InspectionReport` 元件顯示圖片 + 報告
 
 ### 4C. Anomaly Injection
 
@@ -242,7 +242,7 @@
 | Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 25 / 30 |
-| Phase 4 — Mission + Control | 🟡 In progress | 5 / 21 |
+| Phase 4 — Mission + Control | 🟡 In progress | 8 / 21 |
 | **Total** | | **70 / 106** |
 
 ### Status Legend

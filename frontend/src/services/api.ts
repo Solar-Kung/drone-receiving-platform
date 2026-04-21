@@ -66,6 +66,18 @@ export interface Mission {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  report_text?: string | null;
+  report_generated_at?: string | null;
+}
+
+export interface InspectionImageData {
+  id: string;
+  mission_id: string;
+  filename: string;
+  content_type: string;
+  captured_at: string | null;
+  uploaded_at: string;
+  url?: string | null;
 }
 
 // --- API Functions ---
@@ -98,6 +110,11 @@ export const api = {
     drone_id?: string;
   }): Promise<Mission[]> => {
     const { data } = await client.get("/data/missions", { params });
+    return data;
+  },
+
+  getMissionImages: async (missionId: string): Promise<InspectionImageData[]> => {
+    const { data } = await client.get(`/data/missions/${missionId}/images`);
     return data;
   },
 
