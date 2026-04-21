@@ -2,7 +2,7 @@
 
 > 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
 >
-> Last updated: 2026-04-21 (Phase 3A complete, 3B–3E frontend done)
+> Last updated: 2026-04-21 (Phase 4 WP1 complete)
 
 ---
 
@@ -181,11 +181,11 @@
 
 ### 4A. Mission System
 
-- [ ] Orchestrator 在 flight 開始時自動建立 Mission
-- [ ] 每到達 waypoint 更新 mission 進度
-- [ ] 進度透過 WebSocket 即時推送
-- [ ] 新建 `MissionProgress.tsx` 顯示進度條
-- [ ] Flight 完成時自動 complete mission
+- [x] Orchestrator 在 flight 開始時自動建立 Mission
+- [x] 每到達 waypoint 更新 mission 進度
+- [x] 進度透過 WebSocket 即時推送
+- [x] 新建 `MissionProgress.tsx` 顯示進度條
+- [x] Flight 完成時自動 complete mission
 
 ### 4B. Inspection Data + AI Reports
 
@@ -242,7 +242,7 @@
 | Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 25 / 30 |
-| Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |
+| Phase 4 — Mission + Control | 🟡 In progress | 5 / 21 |
 | **Total** | | **70 / 106** |
 
 ### Status Legend

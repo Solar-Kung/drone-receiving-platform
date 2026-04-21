@@ -7,6 +7,7 @@ import LandingControl from "./components/LandingControl/LandingControl";
 import InspectionReport from "./components/InspectionReport/InspectionReport";
 import TelemetryCharts from "./components/TelemetryCharts/TelemetryCharts";
 import AlertPanel from "./components/AlertPanel/AlertPanel";
+import MissionProgress from "./components/MissionProgress/MissionProgress";
 import { api } from "./services/api";
 
 function App() {
@@ -102,6 +103,10 @@ function Dashboard() {
       <div className="card">
         <div className="card-header">Live Map</div>
         <MapView />
+      </div>
+      <div className="card">
+        <div className="card-header">Mission Progress</div>
+        <MissionProgress />
       </div>
       <div className="card">
         <div className="card-header">Altitude Profile</div>

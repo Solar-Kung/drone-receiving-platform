@@ -1,11 +1,11 @@
 """
 Flight Orchestrator — drives the per-drone flight lifecycle.
 
-State machine (no holding pattern):
+State machine:
   scheduled → in_flight → approaching → landing → landed → completed
 
-Transitions are triggered by the position callback registered on each
-TelemetrySimulator.  No Redis pub/sub — direct async calls only.
+Mission lifecycle (parallel):
+  created → in_progress → data_uploading → completed
 """
 
 import asyncio
@@ -15,10 +15,12 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
+from app.api.websocket import manager
 from app.database import async_session
 from app.models.drone import Drone
 from app.models.flight import FlightRecord, FlightStatus
 from app.models.landing import LandingPad
+from app.models.mission import Mission, MissionStatus
 from app.services.flight_tracker import flight_tracker
 from app.services.landing_manager import landing_manager
 
@@ -36,24 +38,25 @@ LANDING_PADS = [
     {"name": "Dazhi Pad C", "latitude": 25.0780, "longitude": 121.5310, "has_charger": False},
 ]
 
-# Ordered to match DRONE_SPECS indices
 _SIM_IDS = ["drone-001", "drone-002", "drone-003"]
+
+_SIM_DESCRIPTIONS = {
+    "drone-001": "Keelung River corridor patrol and infrastructure inspection",
+    "drone-002": "Solar panel array grid scan (Zhonghe)",
+    "drone-003": "Bridge structural inspection (Xinbei Bridge)",
+}
 
 
 class FlightOrchestrator:
     def __init__(self, base_url: str):
         self.base_url = base_url
-        # drone_id (e.g. "drone-001") → DB UUID of Drone row
         self._drone_uuids: dict[str, uuid.UUID] = {}
-        # drone_id → UUID of active FlightRecord
         self._flight_ids: dict[str, uuid.UUID] = {}
-        # drone_id → current FlightStatus (in-memory, authoritative for transitions)
         self._flight_statuses: dict[str, FlightStatus] = {}
-        # drone_id → UUID of LandingSchedule (None if no pad assigned)
         self._schedule_ids: dict[str, uuid.UUID | None] = {}
-        # drone_id → UUID of the reserved/occupied LandingPad (None if none)
         self._pad_ids: dict[str, uuid.UUID | None] = {}
-        # Per-drone lock to serialise concurrent callback invocations
+        self._mission_ids: dict[str, uuid.UUID] = {}
+        self._last_segment_idx: dict[str, int] = {}
         self._locks: dict[str, asyncio.Lock] = {
             sim_id: asyncio.Lock() for sim_id in _SIM_IDS
         }
@@ -94,7 +97,8 @@ class FlightOrchestrator:
         logger.info("Orchestrator callbacks attached to %d simulators", len(fleet.simulators))
 
     async def start(self):
-        """Create a FlightRecord (scheduled) for every seeded drone."""
+        """Create a FlightRecord (scheduled) for every seeded drone, then create missions."""
+        # Step 1: create flights
         async with async_session() as db:
             for sim_id, drone_uuid in self._drone_uuids.items():
                 flight = FlightRecord(drone_id=drone_uuid, status=FlightStatus.SCHEDULED)
@@ -106,6 +110,29 @@ class FlightOrchestrator:
                 self._pad_ids[sim_id] = None
                 logger.info("Flight %s created for %s (scheduled)", flight.id, sim_id)
             await db.commit()
+
+        # Step 2: create missions (independent — failure does not affect flights)
+        for sim_id, drone_uuid in self._drone_uuids.items():
+            try:
+                flight_id = self._flight_ids[sim_id]
+                spec_idx = _SIM_IDS.index(sim_id)
+                spec_name = DRONE_SPECS[spec_idx]["name"]
+                timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+                async with async_session() as db:
+                    mission = Mission(
+                        drone_id=drone_uuid,
+                        flight_id=flight_id,
+                        name=f"{spec_name} — {timestamp}",
+                        description=_SIM_DESCRIPTIONS.get(sim_id),
+                        status=MissionStatus.CREATED,
+                    )
+                    db.add(mission)
+                    await db.commit()
+                    await db.refresh(mission)
+                    self._mission_ids[sim_id] = mission.id
+                    logger.info("Mission %s created for %s", mission.id, sim_id)
+            except Exception as exc:
+                logger.error("Mission creation failed for %s: %s", sim_id, exc)
 
     async def stop(self):
         pass
@@ -122,7 +149,6 @@ class FlightOrchestrator:
     async def _on_position_update(self, drone_id: str, point: dict) -> None:
         flight_id = self._flight_ids.get(drone_id)
         if not flight_id:
-            # orchestrator.start() hasn't run yet — skip
             return
 
         current_status = self._flight_statuses.get(drone_id, FlightStatus.SCHEDULED)
@@ -134,7 +160,29 @@ class FlightOrchestrator:
         total_segments = point.get("total_segments", 1)
         alt = point.get("alt", 0.0)
 
-        # Fast-path exits — avoid acquiring lock + DB session on every tick
+        # Waypoint progress tracking — runs before fast-path so every tick is checked
+        last_seg = self._last_segment_idx.get(drone_id, -1)
+        if segment_idx != last_seg:
+            self._last_segment_idx[drone_id] = segment_idx
+            mission_id = self._mission_ids.get(drone_id)
+            if mission_id and current_status in (
+                FlightStatus.IN_FLIGHT,
+                FlightStatus.APPROACHING,
+                FlightStatus.LANDING,
+            ):
+                progress = round(segment_idx / total_segments * 100, 1)
+                await manager.broadcast("telemetry", {
+                    "type": "mission_progress",
+                    "drone_id": drone_id,
+                    "data": {
+                        "mission_id": str(mission_id),
+                        "current_waypoint": segment_idx,
+                        "total_waypoints": total_segments,
+                        "progress": progress,
+                    },
+                })
+
+        # Fast-path exits — avoid lock + DB session on every tick
         if current_status == FlightStatus.IN_FLIGHT and battery > 0 and segment_idx < total_segments * 0.8:
             return
         if current_status == FlightStatus.LANDING and alt > 5.0 and battery > 0:
@@ -147,13 +195,15 @@ class FlightOrchestrator:
             return
 
         async with lock:
-            # Re-read status under lock to avoid double transitions
             current_status = self._flight_statuses.get(drone_id, FlightStatus.SCHEDULED)
             if current_status == FlightStatus.COMPLETED:
                 return
 
             async with async_session() as db:
-                await self._transition(drone_id, flight_id, current_status, battery, segment_idx, total_segments, alt, db)
+                await self._transition(
+                    drone_id, flight_id, current_status,
+                    battery, segment_idx, total_segments, alt, db,
+                )
 
     async def _transition(
         self,
@@ -166,7 +216,7 @@ class FlightOrchestrator:
         alt: float,
         db,
     ) -> None:
-        # Battery depleted — complete flight from any state
+        # Battery depleted — complete flight (and mission) from any state
         if battery <= 0.0:
             pad_id = self._pad_ids.get(drone_id)
             if pad_id:
@@ -175,15 +225,25 @@ class FlightOrchestrator:
             await flight_tracker.update_flight_status(flight_id, FlightStatus.COMPLETED, db)
             self._flight_statuses[drone_id] = FlightStatus.COMPLETED
             logger.info("[%s] battery depleted → completed", drone_id)
+            await self._complete_mission(drone_id, db)
             return
 
         if status == FlightStatus.SCHEDULED:
             await flight_tracker.update_flight_status(flight_id, FlightStatus.IN_FLIGHT, db)
             self._flight_statuses[drone_id] = FlightStatus.IN_FLIGHT
             logger.info("[%s] scheduled → in_flight", drone_id)
+            # Mission: created → in_progress
+            mission_id = self._mission_ids.get(drone_id)
+            if mission_id:
+                result = await db.execute(select(Mission).where(Mission.id == mission_id))
+                m = result.scalar_one_or_none()
+                if m and m.status == MissionStatus.CREATED:
+                    m.status = MissionStatus.IN_PROGRESS
+                    m.started_at = datetime.now(timezone.utc)
+                    await db.commit()
+                    logger.info("[%s] mission → in_progress", drone_id)
 
         elif status == FlightStatus.IN_FLIGHT and segment_idx >= total_segments * 0.8:
-            # Transition through APPROACHING (transient) directly to LANDING
             await flight_tracker.update_flight_status(flight_id, FlightStatus.APPROACHING, db)
             self._flight_statuses[drone_id] = FlightStatus.APPROACHING
             logger.info("[%s] in_flight → approaching (seg %d/%d)", drone_id, segment_idx, total_segments)
@@ -211,3 +271,28 @@ class FlightOrchestrator:
             await flight_tracker.update_flight_status(flight_id, FlightStatus.LANDED, db)
             self._flight_statuses[drone_id] = FlightStatus.LANDED
             logger.info("[%s] landing → landed (alt=%.1fm)", drone_id, alt)
+            # Mission: in_progress → data_uploading
+            mission_id = self._mission_ids.get(drone_id)
+            if mission_id:
+                result = await db.execute(select(Mission).where(Mission.id == mission_id))
+                m = result.scalar_one_or_none()
+                if m and m.status == MissionStatus.IN_PROGRESS:
+                    m.status = MissionStatus.DATA_UPLOADING
+                    await db.commit()
+                    logger.info("[%s] mission → data_uploading", drone_id)
+
+    async def _complete_mission(self, drone_id: str, db) -> None:
+        """Mark mission as COMPLETED. Called when flight reaches COMPLETED."""
+        mission_id = self._mission_ids.get(drone_id)
+        if not mission_id:
+            return
+        try:
+            result = await db.execute(select(Mission).where(Mission.id == mission_id))
+            m = result.scalar_one_or_none()
+            if m and m.status != MissionStatus.COMPLETED:
+                m.status = MissionStatus.COMPLETED
+                m.completed_at = datetime.now(timezone.utc)
+                await db.commit()
+                logger.info("[%s] mission %s → completed", drone_id, mission_id)
+        except Exception as exc:
+            logger.error("[%s] failed to complete mission: %s", drone_id, exc)
