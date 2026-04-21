@@ -11,9 +11,9 @@ from app.simulation.telemetry_simulator import TelemetrySimulator
 logger = logging.getLogger(__name__)
 
 _FLEET_CONFIG = [
-    ("drone-001", TAIPEI_ROUTE, 0),        # start immediately
-    ("drone-002", SOLAR_FARM_ROUTE, 15),   # start after 15 s
-    ("drone-003", BRIDGE_INSPECTION_ROUTE, 30),  # start after 30 s
+    ("drone-001", TAIPEI_ROUTE, 0),         # start immediately
+    ("drone-002", SOLAR_FARM_ROUTE, 30),    # start after 30 s
+    ("drone-003", BRIDGE_INSPECTION_ROUTE, 60),  # start after 60 s
 ]
 
 

@@ -2,7 +2,7 @@
 
 > 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
 >
-> Last updated: 2026-04-17 (Phase 2 complete)
+> Last updated: 2026-04-21 (Phase 3A complete)
 
 ---
 
@@ -122,12 +122,12 @@
 
 ### 3A. Fleet Simulator
 
-- [ ] 新建 `backend/app/simulation/fleet_simulator.py`
-- [ ] 定義多條路線（基隆河、太陽能板場、橋樑檢查）
-- [ ] 管理 3-5 個 DroneSimulator instance
-- [ ] 起飛時間間隔 30 秒（stagger）
-- [ ] 啟動時自動建立 drone records 到 DB
-- [ ] 每架 drone 有獨立 battery drain 曲線
+- [x] 新建 `backend/app/simulation/fleet_simulator.py`
+- [x] 定義多條路線（基隆河、太陽能板場、橋樑檢查）
+- [x] 管理 3-5 個 DroneSimulator instance
+- [x] 起飛時間間隔 30 秒（stagger）
+- [x] 啟動時自動建立 drone records 到 DB
+- [x] 每架 drone 有獨立 battery drain 曲線
 
 ### 3B. Flight Orchestrator
 
@@ -241,9 +241,9 @@
 |-------|--------|----------|
 | Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
-| Phase 3 — Multi-Drone + Lifecycle | 🔲 Not started | 0 / 25 |
+| Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 6 / 25 |
 | Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |
-| **Total** | | **45 / 101** |
+| **Total** | | **51 / 101** |
 
 ### Status Legend
 

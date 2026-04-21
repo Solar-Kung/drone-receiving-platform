@@ -11,8 +11,8 @@ from app.services.minio_client import ensure_buckets
 from app.services.timescale import ensure_hypertable
 from app.ros_bridge.udp_listener import start_udp_listener
 from app.services.flight_tracker import flight_tracker
-from app.simulation.telemetry_simulator import TelemetrySimulator
-from app.simulation.routes import TAIPEI_ROUTE
+from app.simulation.fleet_simulator import FleetSimulator
+from app.simulation.orchestrator import FlightOrchestrator
 import app.models  # noqa: F401 — registers all models (incl. telemetry) with Base.metadata
 
 
@@ -26,19 +26,23 @@ async def lifespan(app: FastAPI):
     # Start UDP listener for C++ telemetry publisher (WP5)
     asyncio.create_task(start_udp_listener(flight_tracker.handle_telemetry))
 
-    # Start Phase 1 telemetry simulator
-    simulator = TelemetrySimulator(
-        drone_id="drone-001",
-        route=TAIPEI_ROUTE,
-        base_url="http://127.0.0.1:8000",
-    )
-    sim_task = asyncio.create_task(simulator.start())
+    # Phase 3A: multi-drone fleet + flight lifecycle orchestrator
+    orchestrator = FlightOrchestrator(base_url="http://127.0.0.1:8000")
+    await orchestrator.seed_data()  # idempotent drone + pad seeding
+
+    fleet = FleetSimulator(base_url="http://127.0.0.1:8000")
+    orchestrator.attach_to_fleet(fleet)  # wire position callbacks before start
+
+    fleet_task = asyncio.create_task(fleet.start())
+    orch_task = asyncio.create_task(orchestrator.start())
 
     yield
 
     # Shutdown
-    await simulator.stop()
-    sim_task.cancel()
+    await fleet.stop()
+    await orchestrator.stop()
+    fleet_task.cancel()
+    orch_task.cancel()
     await engine.dispose()
 
 
