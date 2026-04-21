@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # ROS 2
     ros_domain_id: int = 0
 
+    # Anthropic (leave empty to use fallback template report)
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-6"
+
     # CORS
     cors_origins: List[str] = ["http://localhost:3000"]
 

@@ -33,6 +33,8 @@ class MissionResponse(BaseModel):
     status: MissionStatus
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
+    report_text: Optional[str] = None
+    report_generated_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

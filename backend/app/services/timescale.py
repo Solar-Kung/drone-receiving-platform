@@ -22,3 +22,16 @@ async def ensure_hypertable() -> None:
             )
         )
     logger.info("TimescaleDB hypertable ensured for telemetry_data")
+
+
+async def ensure_mission_columns() -> None:
+    """Idempotently add Phase 4 WP3 columns to missions table if missing."""
+    async with engine.begin() as conn:
+        for col, dtype in [
+            ("report_text", "TEXT"),
+            ("report_generated_at", "TIMESTAMP WITH TIME ZONE"),
+        ]:
+            await conn.execute(
+                text(f"ALTER TABLE missions ADD COLUMN IF NOT EXISTS {col} {dtype}")
+            )
+    logger.info("Mission report columns ensured")

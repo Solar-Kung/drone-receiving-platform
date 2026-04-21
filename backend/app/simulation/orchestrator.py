@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.api.websocket import manager
 from app.database import async_session
-from app.services import inspection_image_generator
+from app.services import inspection_image_generator, ai_report_generator
 from app.models.drone import Drone
 from app.models.flight import FlightRecord, FlightStatus
 from app.models.landing import LandingPad
@@ -324,7 +324,7 @@ class FlightOrchestrator:
             })
 
     async def _complete_mission(self, drone_id: str, db) -> None:
-        """Mark mission as COMPLETED. Called when flight reaches COMPLETED."""
+        """Mark mission as COMPLETED and trigger AI report generation."""
         mission_id = self._mission_ids.get(drone_id)
         if not mission_id:
             return
@@ -336,5 +336,28 @@ class FlightOrchestrator:
                 m.completed_at = datetime.now(timezone.utc)
                 await db.commit()
                 logger.info("[%s] mission %s → completed", drone_id, mission_id)
+                # Trigger AI report generation non-blocking
+                asyncio.create_task(
+                    self._generate_and_broadcast_report(drone_id, mission_id)
+                )
         except Exception as exc:
             logger.error("[%s] failed to complete mission: %s", drone_id, exc)
+
+    async def _generate_and_broadcast_report(
+        self, drone_id: str, mission_id: uuid.UUID
+    ) -> None:
+        """Generate AI report, save to DB, broadcast via WebSocket."""
+        try:
+            report_text = await ai_report_generator.generate_report(mission_id)
+            await ai_report_generator.save_report(mission_id, report_text)
+            await manager.broadcast("telemetry", {
+                "type": "mission_report",
+                "drone_id": drone_id,
+                "data": {
+                    "mission_id": str(mission_id),
+                    "report_text": report_text,
+                },
+            })
+            logger.info("[%s] mission report broadcast complete", drone_id)
+        except Exception as exc:
+            logger.error("[%s] report generation failed: %s", drone_id, exc)
