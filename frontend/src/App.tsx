@@ -8,6 +8,7 @@ import InspectionReport from "./components/InspectionReport/InspectionReport";
 import TelemetryCharts from "./components/TelemetryCharts/TelemetryCharts";
 import AlertPanel from "./components/AlertPanel/AlertPanel";
 import MissionProgress from "./components/MissionProgress/MissionProgress";
+import SimulationControl from "./components/SimulationControl/SimulationControl";
 import { api } from "./services/api";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <NavLink to="/telemetry">Telemetry</NavLink>
         <NavLink to="/landings">Landing Control</NavLink>
         <NavLink to="/inspections">Inspections</NavLink>
+        <NavLink to="/simulation">Simulation</NavLink>
       </nav>
 
       <main className="app-content">
@@ -33,6 +35,7 @@ function App() {
           <Route path="/telemetry" element={<TelemetryPanel />} />
           <Route path="/landings" element={<LandingControl />} />
           <Route path="/inspections" element={<InspectionReport />} />
+          <Route path="/simulation" element={<SimulationPage />} />
         </Routes>
       </main>
       <AlertPanel />
@@ -115,6 +118,17 @@ function Dashboard() {
       <div className="card">
         <div className="card-header">Telemetry Charts</div>
         <TelemetryCharts />
+      </div>
+    </div>
+  );
+}
+
+function SimulationPage() {
+  return (
+    <div>
+      <div className="card">
+        <div className="card-header">Simulation Control</div>
+        <SimulationControl />
       </div>
     </div>
   );

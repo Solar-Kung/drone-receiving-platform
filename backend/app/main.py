@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api import flights, landings, data, websocket, telemetry, stats
+from app.api import flights, landings, data, websocket, telemetry, stats, simulation
 from app.database import engine, Base
 from app.services.minio_client import ensure_buckets
 from app.services.timescale import ensure_hypertable, ensure_mission_columns
@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
 
     fleet = FleetSimulator(base_url="http://127.0.0.1:8000")
     orchestrator.attach_to_fleet(fleet)  # wire position callbacks before start
+    app.state.fleet = fleet  # expose for simulation control API
 
     fleet_task = asyncio.create_task(fleet.start())
     orch_task = asyncio.create_task(orchestrator.start())
@@ -68,6 +69,7 @@ app.include_router(flights.router, prefix="/api/v1/flights", tags=["flights"])
 app.include_router(landings.router, prefix="/api/v1/landings", tags=["landings"])
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
+app.include_router(simulation.router, prefix="/api/v1/simulation", tags=["simulation"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 
 

@@ -196,19 +196,19 @@
 
 ### 4C. Anomaly Injection
 
-- [ ] Simulator 隨機注入 battery 突降
-- [ ] Simulator 隨機注入 GPS drift
-- [ ] Simulator 隨機注入 signal loss（暫停 telemetry）
-- [ ] Simulator 隨機注入 emergency return（中斷任務返航）
-- [ ] 異常事件觸發 alert system
+- [x] Simulator 隨機注入 battery 突降
+- [x] Simulator 隨機注入 GPS drift
+- [x] Simulator 隨機注入 signal loss（暫停 telemetry）
+- [x] Simulator 隨機注入 emergency return（中斷任務返航）
+- [x] 異常事件觸發 alert system
 
 ### 4D. Simulation Control Panel
 
-- [ ] 新建 `SimulationControl.tsx` 頁面
-- [ ] 後端 `POST /api/v1/simulation/control` endpoint
-- [ ] 後端 `GET /api/v1/simulation/status` endpoint
-- [ ] Start / Pause / Stop 控制
-- [ ] 速度調整（1x / 2x / 5x）
+- [x] 新建 `SimulationControl.tsx` 頁面
+- [x] 後端 `POST /api/v1/simulation/control` endpoint
+- [x] 後端 `GET /api/v1/simulation/status` endpoint
+- [x] Start / Pause / Stop 控制
+- [x] 速度調整（1x / 2x / 5x）
 - [ ] 手動新增/移除 drone
 - [ ] 場景 preset 選擇
 
@@ -217,7 +217,7 @@
 - [ ] Mission 隨 flight 自動建立並追蹤進度
 - [ ] 巡檢圖片在 MinIO 中可存取
 - [ ] 偶爾出現異常事件並觸發告警
-- [ ] 控制面板可暫停/恢復/調速模擬
+- [x] 控制面板可暫停/恢復/調速模擬
 - [ ] 場景 preset 可正確載入
 
 ---
@@ -242,8 +242,8 @@
 | Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 25 / 30 |
-| Phase 4 — Mission + Control | 🟡 In progress | 9 / 21 |
-| **Total** | | **70 / 106** |
+| Phase 4 — Mission + Control | 🟡 In progress | 20 / 21 |
+| **Total** | | **90 / 106** |
 
 ### Status Legend
 

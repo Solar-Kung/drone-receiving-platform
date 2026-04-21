@@ -70,6 +70,12 @@ export interface Mission {
   report_generated_at?: string | null;
 }
 
+export interface SimulationStatus {
+  paused: boolean;
+  speed: number;
+  drones: { drone_id: string; running: boolean; paused: boolean; stopped: boolean }[];
+}
+
 export interface InspectionImageData {
   id: string;
   mission_id: string;
@@ -129,6 +135,23 @@ export const api = {
   // Stats
   getStats: async (): Promise<{ success: boolean; data: StatsSummary }> => {
     const { data } = await client.get("/stats/summary");
+    return data;
+  },
+
+  // Simulation control
+  getSimulationStatus: async (): Promise<SimulationStatus> => {
+    const { data } = await client.get("/simulation/status");
+    return data;
+  },
+
+  simulationControl: async (
+    action: "pause" | "resume" | "set_speed",
+    speed?: number
+  ): Promise<SimulationStatus> => {
+    const { data } = await client.post("/simulation/control", {
+      action,
+      speed: speed ?? 1.0,
+    });
     return data;
   },
 };

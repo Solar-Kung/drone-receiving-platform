@@ -23,6 +23,7 @@ class FleetSimulator:
     def __init__(self, base_url: str, speed_multiplier: float = 1.0):
         self.base_url = base_url
         self.speed_multiplier = speed_multiplier
+        self.paused = False
         self._tasks: list[asyncio.Task] = []
 
         # Create simulators up-front so callbacks can be wired before start().
@@ -50,6 +51,24 @@ class FleetSimulator:
         if delay > 0:
             await asyncio.sleep(delay)
         await sim.start()
+
+    def pause(self) -> None:
+        self.paused = True
+        for sim in self.simulators.values():
+            sim.paused = True
+        logger.info("Fleet paused")
+
+    def resume(self) -> None:
+        self.paused = False
+        for sim in self.simulators.values():
+            sim.paused = False
+        logger.info("Fleet resumed")
+
+    def set_speed(self, multiplier: float) -> None:
+        self.speed_multiplier = multiplier
+        for sim in self.simulators.values():
+            sim.speed_multiplier = multiplier
+        logger.info("Fleet speed set to %.1fx", multiplier)
 
     async def stop(self):
         for sim in self.simulators.values():

@@ -54,6 +54,7 @@ class TelemetrySimulator:
         self.speed_multiplier = speed_multiplier
         self.on_position_update = on_position_update
         self.running = False
+        self.paused = False
         self._stopped = False
         self._anomaly_state = AnomalyState()
 
@@ -85,6 +86,10 @@ class TelemetrySimulator:
                     for step in range(steps):
                         if not self.running or done:
                             break
+
+                        if self.paused:
+                            await asyncio.sleep(0.5)
+                            continue
 
                         t = step / steps
                         point = self._interpolate(start_wp, end_wp, t)
