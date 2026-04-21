@@ -2,11 +2,14 @@
 Telemetry Simulator — posts GPS + extended telemetry to the REST API at 1 Hz.
 
 Phase 3 additions:
-  - on_position_update callback: called after each successful POST so the
-    FlightOrchestrator can drive state transitions without polling.
-  - Battery stop: once battery reaches 0 % the simulator exits cleanly.
-  - Single-route semantics: the route loops while battery > 0; when battery
-    hits 0 the loop exits and is_stopped becomes True.
+  - on_position_update callback
+  - Battery stop: battery=0 exits cleanly
+
+Phase 4 additions:
+  - AnomalyState per simulator; anomalies mutate payload each tick
+  - SIGNAL_LOSS suppresses the HTTP POST for its duration
+  - EMERGENCY_RETURN passes flag to orchestrator via callback
+  - Broadcasts alert WebSocket message on anomaly trigger
 """
 
 import asyncio
@@ -18,7 +21,22 @@ from typing import Any, Awaitable, Callable, Optional
 
 import httpx
 
+from app.api.websocket import manager
+from app.simulation.anomalies import (
+    AnomalyState,
+    AnomalyType,
+    apply_anomaly,
+    maybe_trigger_anomaly,
+)
+
 logger = logging.getLogger(__name__)
+
+_ANOMALY_ALERT: dict[AnomalyType, tuple[str, str]] = {
+    AnomalyType.BATTERY_DROP: ("critical", "Battery dropped 15% — unexpected discharge"),
+    AnomalyType.GPS_DRIFT: ("warning", "GPS drift detected"),
+    AnomalyType.SIGNAL_LOSS: ("warning", "Signal loss — telemetry interrupted"),
+    AnomalyType.EMERGENCY_RETURN: ("critical", "Emergency return triggered"),
+}
 
 
 class TelemetrySimulator:
@@ -37,6 +55,7 @@ class TelemetrySimulator:
         self.on_position_update = on_position_update
         self.running = False
         self._stopped = False
+        self._anomaly_state = AnomalyState()
 
     @property
     def is_stopped(self) -> bool:
@@ -45,8 +64,7 @@ class TelemetrySimulator:
     async def start(self):
         self.running = True
         self._stopped = False
-        # Wait for the FastAPI server to finish startup before sending the
-        # first POST so we don't hit "connection refused".
+        # Wait for the FastAPI server to finish startup
         await asyncio.sleep(3)
 
         elapsed_seconds = 0
@@ -73,7 +91,7 @@ class TelemetrySimulator:
                         battery = max(0.0, 100.0 - elapsed_seconds * 0.05)
                         signal = 95.0 + random.uniform(-3.0, 3.0)
 
-                        payload = {
+                        payload: dict[str, Any] = {
                             "drone_id": self.drone_id,
                             "latitude": point["lat"],
                             "longitude": point["lon"],
@@ -85,44 +103,62 @@ class TelemetrySimulator:
                             "signal_strength": round(signal, 1),
                         }
 
-                        try:
-                            await client.post(
-                                f"{self.base_url}/api/v1/telemetry", json=payload
-                            )
-                        except Exception as exc:
-                            logger.warning("[%s] POST failed: %s", self.drone_id, exc)
+                        # --- Anomaly injection ---
+                        prev_anomaly = self._anomaly_state.active
+                        maybe_trigger_anomaly(self._anomaly_state)
+                        payload = apply_anomaly(payload, self._anomaly_state)
 
-                        # Callback after successful (or attempted) POST
+                        # Broadcast alert when a NEW anomaly just triggered
+                        if self._anomaly_state.active and self._anomaly_state.active != prev_anomaly:
+                            level, msg = _ANOMALY_ALERT.get(
+                                self._anomaly_state.active, ("warning", "Anomaly detected")
+                            )
+                            logger.info("[%s] anomaly triggered: %s", self.drone_id, self._anomaly_state.active)
+                            await manager.broadcast("telemetry", {
+                                "type": "alert",
+                                "drone_id": self.drone_id,
+                                "level": level,
+                                "message": msg,
+                            })
+
+                        suppress_post = payload.pop("_suppress_post", False)
+                        emergency_return = payload.pop("_emergency_return", False)
+
+                        # Strip internal keys before POST
+                        api_payload = {k: v for k, v in payload.items() if not k.startswith("_")}
+
+                        if not suppress_post:
+                            try:
+                                await client.post(
+                                    f"{self.base_url}/api/v1/telemetry", json=api_payload
+                                )
+                            except Exception as exc:
+                                logger.warning("[%s] POST failed: %s", self.drone_id, exc)
+
+                        # Position callback
                         if self.on_position_update is not None:
                             try:
                                 await self.on_position_update(
                                     self.drone_id,
                                     {
-                                        "lat": point["lat"],
-                                        "lon": point["lon"],
-                                        "alt": point["alt"],
-                                        "battery_level": round(battery, 2),
+                                        "lat": payload["latitude"],
+                                        "lon": payload["longitude"],
+                                        "alt": payload["altitude"],
+                                        "battery_level": payload["battery_level"],
                                         "speed": 10.0,
                                         "heading": round(heading, 1),
                                         "segment_idx": segment_idx,
                                         "total_segments": total_segments,
+                                        "emergency_return": emergency_return,
                                     },
                                 )
                             except Exception as exc:
-                                logger.warning(
-                                    "[%s] Position callback error: %s",
-                                    self.drone_id,
-                                    exc,
-                                )
+                                logger.warning("[%s] Position callback error: %s", self.drone_id, exc)
 
                         elapsed_seconds += 1
 
                         if battery <= 0.0:
-                            logger.info(
-                                "[%s] Battery depleted after %ds — stopping.",
-                                self.drone_id,
-                                elapsed_seconds,
-                            )
+                            logger.info("[%s] Battery depleted after %ds — stopping.", self.drone_id, elapsed_seconds)
                             done = True
                             break
 
@@ -140,9 +176,7 @@ class TelemetrySimulator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _interpolate(
-        start: dict[str, Any], end: dict[str, Any], t: float
-    ) -> dict[str, float]:
+    def _interpolate(start: dict[str, Any], end: dict[str, Any], t: float) -> dict[str, float]:
         return {
             "lat": start["lat"] + (end["lat"] - start["lat"]) * t,
             "lon": start["lon"] + (end["lon"] - start["lon"]) * t,
@@ -155,7 +189,6 @@ class TelemetrySimulator:
 
     @staticmethod
     def _heading(a: dict[str, Any], b: dict[str, Any]) -> float:
-        """Bearing from a to b in degrees (0 = north, clockwise)."""
         dlat = b["lat"] - a["lat"]
         dlon = b["lon"] - a["lon"]
         return math.degrees(math.atan2(dlon, dlat)) % 360

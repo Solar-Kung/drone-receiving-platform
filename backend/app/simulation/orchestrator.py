@@ -194,8 +194,16 @@ class FlightOrchestrator:
                         )
                     )
 
+        # Emergency return: force approaching transition regardless of segment
+        emergency_return = point.get("emergency_return", False)
+
         # Fast-path exits — avoid lock + DB session on every tick
-        if current_status == FlightStatus.IN_FLIGHT and battery > 0 and segment_idx < total_segments * 0.8:
+        if (
+            current_status == FlightStatus.IN_FLIGHT
+            and battery > 0
+            and segment_idx < total_segments * 0.8
+            and not emergency_return
+        ):
             return
         if current_status == FlightStatus.LANDING and alt > 5.0 and battery > 0:
             return
@@ -215,6 +223,7 @@ class FlightOrchestrator:
                 await self._transition(
                     drone_id, flight_id, current_status,
                     battery, segment_idx, total_segments, alt, db,
+                    emergency_return=emergency_return,
                 )
 
     async def _transition(
@@ -227,6 +236,7 @@ class FlightOrchestrator:
         total_segments: int,
         alt: float,
         db,
+        emergency_return: bool = False,
     ) -> None:
         # Battery depleted — complete flight (and mission) from any state
         if battery <= 0.0:
@@ -255,7 +265,9 @@ class FlightOrchestrator:
                     await db.commit()
                     logger.info("[%s] mission → in_progress", drone_id)
 
-        elif status == FlightStatus.IN_FLIGHT and segment_idx >= total_segments * 0.8:
+        elif status == FlightStatus.IN_FLIGHT and (
+            segment_idx >= total_segments * 0.8 or emergency_return
+        ):
             await flight_tracker.update_flight_status(flight_id, FlightStatus.APPROACHING, db)
             self._flight_statuses[drone_id] = FlightStatus.APPROACHING
             logger.info("[%s] in_flight → approaching (seg %d/%d)", drone_id, segment_idx, total_segments)
