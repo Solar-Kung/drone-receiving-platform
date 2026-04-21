@@ -2,7 +2,7 @@
 
 > 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
 >
-> Last updated: 2026-04-21 (Phase 3A complete)
+> Last updated: 2026-04-21 (Phase 3A complete, 3B–3E frontend done)
 
 ---
 
@@ -131,38 +131,38 @@
 
 ### 3B. Flight Orchestrator
 
-- [ ] 新建 `backend/app/simulation/orchestrator.py`
-- [ ] 自動建立 FlightRecord（→ scheduled）
-- [ ] 起飛時自動切換 → in_flight
-- [ ] 距離目標 < 500m 自動切換 → approaching
-- [ ] 呼叫 LandingManager 預約 pad → landing
-- [ ] 高度 = 0 且對齊 pad → landed
+- [x] 新建 `backend/app/simulation/orchestrator.py`
+- [x] 自動建立 FlightRecord（→ scheduled）
+- [x] 起飛時自動切換 → in_flight
+- [x] 距離目標 < 500m 自動切換 → approaching
+- [x] 呼叫 LandingManager 預約 pad → landing
+- [x] 高度 = 0 且對齊 pad → landed
 - [ ] 等待 30 秒 → completed，釋放 pad
 - [ ] 無可用 pad 時進入 holding pattern
-- [ ] Flight status 變更透過 `/ws/flights` 即時推送
+- [x] Flight status 變更透過 `/ws/flights` 即時推送
 - [ ] Redis pub/sub 做內部事件總線
 
 ### 3C. Landing Pad Management
 
-- [ ] Simulator 啟動時建立 2-3 個 landing pad（松山、圓山、大直）
-- [ ] Orchestrator approaching 時呼叫 `assign_pad()`
+- [x] Simulator 啟動時建立 2-3 個 landing pad（松山、圓山、大直）
+- [x] Orchestrator approaching 時呼叫 `assign_pad()`
 - [ ] Orchestrator completed 時呼叫 `release_pad()`
-- [ ] 同時兩架 approaching 不分配同一個 pad
-- [ ] Pad 狀態變更透過 `/ws/landings` 即時推送
+- [x] 同時兩架 approaching 不分配同一個 pad
+- [x] Pad 狀態變更透過 `/ws/landings` 即時推送
 
 ### 3D. Multi-Drone Map
 
-- [ ] `MapView.tsx` 支援多個 marker
-- [ ] 每架 drone 不同顏色
-- [ ] 每架有獨立軌跡線
-- [ ] 維護 `Map<drone_id, { marker, trail }>` 結構
-- [ ] 點擊 marker 顯示該 drone 資訊
+- [x] `MapView.tsx` 支援多個 marker
+- [x] 每架 drone 不同顏色
+- [x] 每架有獨立軌跡線
+- [x] 維護 `Map<drone_id, { marker, trail }>` 結構
+- [x] 點擊 marker 顯示該 drone 資訊
 
 ### 3E. Landing Pad UI
 
-- [ ] 地圖上顯示 landing pad markers（方形 icon）
-- [ ] Pad 顏色反映狀態（綠 available, 黃 reserved, 紅 occupied）
-- [ ] 點擊顯示 pad 資訊
+- [x] 地圖上顯示 landing pad markers（方形 icon）
+- [x] Pad 顏色反映狀態（綠 available, 黃 reserved, 紅 occupied）
+- [x] 點擊顯示 pad 資訊
 - [ ] 整合現有 `LandingControl` 元件到地圖
 
 ### Phase 3 Integration Test
@@ -241,9 +241,9 @@
 |-------|--------|----------|
 | Phase 1 — Single Drone Pipeline | 🟡 In progress | 31 / 37 |
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
-| Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 6 / 25 |
+| Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 25 / 30 |
 | Phase 4 — Mission + Control | 🔲 Not started | 0 / 21 |
-| **Total** | | **51 / 101** |
+| **Total** | | **70 / 106** |
 
 ### Status Legend
 
