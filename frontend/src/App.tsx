@@ -52,6 +52,12 @@ function Dashboard() {
     refetchInterval: 5000,
   });
 
+  const { data: activeFlights } = useQuery({
+    queryKey: ["activeFlights"],
+    queryFn: api.getActiveFlights,
+    refetchInterval: 5000,
+  });
+
   const { data: missions } = useQuery({
     queryKey: ["missions"],
     queryFn: () => api.getMissions(),
@@ -60,6 +66,7 @@ function Dashboard() {
 
   const stats = statsRes?.data;
   const activeDrones = stats?.active_drones ?? "--";
+  const activeFlightCount = activeFlights != null ? activeFlights.length : "--";
   const availablePads =
     pads != null
       ? pads.filter((p) => p.status === "available").length
@@ -81,7 +88,7 @@ function Dashboard() {
         </div>
         <div className="card">
           <div className="card-header">Active Flights</div>
-          <div className="card-value">{activeDrones}</div>
+          <div className="card-value">{activeFlightCount}</div>
         </div>
         <div className="card">
           <div className="card-header">Available Pads</div>

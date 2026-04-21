@@ -101,6 +101,14 @@ export const api = {
     return data;
   },
 
+  // Active flights (all non-completed, non-aborted)
+  getActiveFlights: async (): Promise<FlightRecord[]> => {
+    const { data } = await client.get("/flights");
+    return (data as FlightRecord[]).filter(
+      (f) => !["completed", "aborted"].includes(f.status)
+    );
+  },
+
   // Stats
   getStats: async (): Promise<{ success: boolean; data: StatsSummary }> => {
     const { data } = await client.get("/stats/summary");

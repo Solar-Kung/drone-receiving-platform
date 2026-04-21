@@ -43,9 +43,9 @@ function TelemetryPanel() {
               className="card-value"
               style={{
                 color:
-                  telemetry.battery_level > 50
+                  (telemetry.battery_level ?? 100) > 50
                     ? "var(--accent-green)"
-                    : telemetry.battery_level > 20
+                    : (telemetry.battery_level ?? 100) > 20
                     ? "var(--accent-yellow)"
                     : "var(--accent-red)",
               }}
