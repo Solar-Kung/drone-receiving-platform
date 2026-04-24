@@ -271,6 +271,10 @@
 | Phase 5 — Horizontal Scaling | 🟡 In progress | 15 / 15 (WP1) |
 | **Total** | | **105 / 121** |
 
+### Documentation
+
+- ✅ 2026-04-24 User guide 初版（反映當前實作狀態）— `docs/user_guide.md`
+
 ### Status Legend
 
 - 🔲 Not started
