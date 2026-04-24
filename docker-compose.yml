@@ -3,9 +3,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    expose:
+      - "8000"
     ports:
-      - "8000:8000"
-      - "14550:14550/udp"   # C++ telemetry publisher → UDP listener (WP5)
+      - "14550:14550/udp"   # C++ telemetry publisher → UDP listener (leader only)
     env_file:
       - ./configs/.env
     depends_on:
@@ -20,6 +21,17 @@ services:
     networks:
       - drone-net
 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./configs/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - drone-net
+
   frontend:
     build:
       context: ./frontend
@@ -28,6 +40,7 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+      - nginx
     networks:
       - drone-net
 

@@ -2,7 +2,7 @@
 
 > 實作進度追蹤 — Claude Code 完成每個步驟後在此打勾
 >
-> Last updated: 2026-04-21 (Phase 4 WP1 complete)
+> Last updated: 2026-04-24 (Phase 5 WP1 complete)
 
 ---
 
@@ -235,6 +235,31 @@
 
 ---
 
+---
+
+## Phase 5 — Horizontal Scaling
+
+**Goal:** 讓 backend 水平擴展，WebSocket 事件透過 Redis pub/sub fan-out
+
+### WP1 — Redis Pub/Sub + Leader Election
+
+- [x] 新建 `backend/app/services/redis_client.py`（init/close/publish/subscribe helpers）
+- [x] `ConnectionManager.broadcast()` 改為 publish 到 Redis；`_local_broadcast()` 保留供 subscriber 呼叫
+- [x] 新增 `run_redis_subscriber()` — 每個 instance 都訂閱 Redis 並廣播到本地 WS 連線
+- [x] Lifespan 整合 Redis subscriber task（所有 instance 執行）
+- [x] Leader election via `Redis SET NX EX`（hostname-based）
+- [x] Leader 啟動 FleetSimulator + FlightOrchestrator + UDP listener
+- [x] Follower 跳過 simulation stack，只服務 REST/WebSocket
+- [x] Leader 每 30 秒 refresh TTL，shutdown 時釋放 lock
+- [x] `GET /api/v1/simulation/status` — follower 回 503 with leader hostname hint
+- [x] `POST /api/v1/simulation/control` — follower 回 503 with leader hostname hint
+- [x] `docker-compose.yml` — backend 改 expose（無 host port），新增 nginx load balancer
+- [x] `configs/nginx.conf` — upstream backend_pool + WebSocket proxy 設定
+- [x] `frontend/vite.config.ts` — proxy target 改為 `http://nginx:80`
+- [x] `scripts/verify_scale.sh` — 自動驗證 scale 後 leader/follower 各一
+
+---
+
 ## Summary
 
 | Phase | Status | Progress |
@@ -243,7 +268,8 @@
 | Phase 2 — Dashboard + Telemetry | 🟡 In progress | 14 / 18 |
 | Phase 3 — Multi-Drone + Lifecycle | 🟡 In progress | 25 / 30 |
 | Phase 4 — Mission + Control | 🟡 In progress | 20 / 21 |
-| **Total** | | **90 / 106** |
+| Phase 5 — Horizontal Scaling | 🟡 In progress | 15 / 15 (WP1) |
+| **Total** | | **105 / 121** |
 
 ### Status Legend
 

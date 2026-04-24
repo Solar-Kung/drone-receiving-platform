@@ -84,11 +84,21 @@ Three channels managed by a single `ConnectionManager` in `api/websocket.py`:
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| backend | 8000 | FastAPI (uvicorn) |
+| nginx | 8000 | Load balancer (reverse proxy to backend pool) |
+| backend | (internal) | FastAPI (uvicorn), scalable via `--scale backend=N` |
 | frontend | 3000 | Vite preview / nginx |
 | timescaledb | 5432 | Time-series PostgreSQL |
-| redis | 6379 | WebSocket pub/sub |
+| redis | 6379 | WebSocket pub/sub + leader election |
 | minio | 9000/9001 | Inspection image storage |
+
+### Horizontal Scaling
+
+Backend instances can be scaled with `docker compose up -d --scale backend=2`.
+
+- **Redis pub/sub fan-out**: every `manager.broadcast(channel, data)` call publishes to Redis. Each instance runs a `run_redis_subscriber()` task that listens on Redis and calls `_local_broadcast()` to send to its own WebSocket clients. This makes WebSocket events visible to all connected clients regardless of which backend they hit.
+- **Leader election**: on startup, each instance tries `Redis SET NX EX 60` for key `drone_platform:simulation_leader`. The winner starts FleetSimulator + FlightOrchestrator + UDP listener. The loser (follower) skips the simulation stack. The leader refreshes its TTL every 30 seconds; if the leader dies, the key expires in 60 seconds and the next startup wins.
+- **Follower behaviour**: `GET /api/v1/simulation/status` and `POST /api/v1/simulation/control` return 503 `{"error": "not_leader"}` on followers — nginx round-robin will route retries to the leader.
+- **Known trade-offs**: UDP telemetry from C++ publisher may hit a follower (Docker DNS round-robin); only the leader processes it. Simulation control requests require hitting the leader — callers should retry on 503.
 
 ## Key Implementation Notes
 

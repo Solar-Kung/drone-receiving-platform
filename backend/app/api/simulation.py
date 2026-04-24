@@ -1,12 +1,32 @@
 """
 Simulation Control API — pause/resume/speed for the in-process FleetSimulator.
+
+Note: These endpoints are only served by the leader instance. Followers return 503
+so the client can retry (nginx round-robin will eventually reach the leader).
 """
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Literal
 
+from app.services.redis_client import get_redis
+
 router = APIRouter()
+
+SIMULATION_LEADER_KEY = "drone_platform:simulation_leader"
+
+
+async def _require_leader(request: Request):
+    """Raise 503 with leader hint if this instance is not the simulation leader."""
+    if not getattr(request.app.state, "is_leader", False):
+        try:
+            leader = await get_redis().get(SIMULATION_LEADER_KEY)
+        except Exception:
+            leader = None
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "not_leader", "leader_hostname": leader},
+        )
 
 
 class ControlRequest(BaseModel):
@@ -16,9 +36,8 @@ class ControlRequest(BaseModel):
 
 @router.get("/status")
 async def simulation_status(request: Request):
-    fleet = getattr(request.app.state, "fleet", None)
-    if fleet is None:
-        raise HTTPException(status_code=503, detail="Fleet not initialised")
+    await _require_leader(request)
+    fleet = request.app.state.fleet
     drones = [
         {
             "drone_id": drone_id,
@@ -37,9 +56,8 @@ async def simulation_status(request: Request):
 
 @router.post("/control")
 async def simulation_control(body: ControlRequest, request: Request):
-    fleet = getattr(request.app.state, "fleet", None)
-    if fleet is None:
-        raise HTTPException(status_code=503, detail="Fleet not initialised")
+    await _require_leader(request)
+    fleet = request.app.state.fleet
 
     if body.action == "pause":
         fleet.pause()

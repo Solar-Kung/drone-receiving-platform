@@ -14,11 +14,11 @@ export default defineConfig({
     host: "0.0.0.0",
     proxy: {
       "/api": {
-        target: "http://backend:8000",
+        target: "http://nginx:80",
         changeOrigin: true,
       },
       "/ws": {
-        target: "ws://backend:8000",
+        target: "ws://nginx:80",
         ws: true,
       },
     },
